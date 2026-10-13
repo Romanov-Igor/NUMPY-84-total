@@ -1,5 +1,5 @@
 import streamlit as st
-from src import loader, merger, cleaner, filter, metrics, plotter
+from src import loader, merger, cleaner, filter, metrics, plotter, insights
 
 @st.cache_data
 def load_data():
@@ -9,8 +9,13 @@ def load_data():
     return cleaned_df
 
 def main():
-    cleaned_df = load_data()    # Сырой датафрейм
-    filtered_df = filter.filter_data(cleaned_df)   # Отфильтрованный датафрейм
+    cleaned_df = load_data() # Сырой датафрейм
+    period_df, filtered_df, selected = filter.filter_data(cleaned_df)
+
+    if period_df.empty:
+        st.warning("Нет данных за выбранный период.")
+        return
+    
     total_orders, total_revenue, total_unique_users, average_bill = metrics.calculate_metrics(filtered_df) # Метрики
     
     # Отображаем сырые данные в Streamlit
@@ -22,6 +27,7 @@ def main():
     st.title("Отфильтрованные данные")
     if filtered_df.empty:
         st.warning("Нет данных за выбранный период и категорию.")
+        return
     else:
         st.caption(f'Строк: {len(filtered_df)} из {len(cleaned_df)}')
         st.dataframe(filtered_df)
@@ -35,23 +41,20 @@ def main():
     row2[1].metric("Средний чек", value=f"{average_bill:,.2f} ₽")
 
     # Отображаем графики
-    tab1, tab2, tab3 = st.tabs(["Топ-10 товаров", "Выручка по категориям", "Заказы по дням недели"])
+    tab1, tab2, tab3 = st.tabs(["Топ товаров по выручке", "Выручка по категориям", "Заказы по дням недели"])
     with tab1:
-        st.pyplot(plotter.build_top10_plot(cleaned_df))
+        st.pyplot(plotter.build_top10_plot(filtered_df))
     with tab2:
-        st.pyplot(plotter.build_category_bar(cleaned_df))
+        st.pyplot(plotter.build_category_bar(period_df, selected))
+        if selected:
+            st.caption(f"Оранжевым выделена выбранная категория: {selected}")
     with tab3:
-        st.pyplot(plotter.build_weekday_plot(cleaned_df))
+        st.pyplot(plotter.build_weekday_plot(filtered_df))
 
     # Аналитические выводы
-    st.markdown(
-        """
-        # Выводы
-        1. Самую большую выручку принес товар: Ноутбук ASUS VivoBook.  
-        2. Категория с наибольшей долей выручки: Электроника. 54.6%, что значительно больше других категорий.  
-        3. Пик продаж приходится на пятницу. В четверг и субботу также продажи больше чем в другие дни.
-        """
-    )
+    st.markdown("# Выводы")
+    for i, text in enumerate(insights.build_insights(filtered_df, period_df), start=1):
+        st.markdown(f"{i}. {text}")
 
 if __name__ == "__main__":
     main()

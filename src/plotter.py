@@ -1,6 +1,11 @@
 import matplotlib.pyplot as plt
+from src import config
 
 def build_top10_plot(df):
+    """
+    Построение графика топ-10 товаров
+    
+    """
     revenue = df['quantity'] * df['price_per_unit']
     top10 = revenue.groupby(df['item_name']).sum().nlargest(10).sort_values()
     
@@ -14,13 +19,19 @@ def build_top10_plot(df):
     
     return fig
 
-def build_category_bar(df):
+def build_category_bar(df, selected=None):
+    """
+    Построение графика выручки по категориям
+
+    """
     revenue = df["quantity"] * df["price_per_unit"]
     by_cat = revenue.groupby(df["category"]).sum().sort_values()
     share = by_cat / by_cat.sum() * 100
 
+    colors = ["#E4572E" if cat == selected else "steelblue" for cat in by_cat.index]
+
     fig, ax = plt.subplots(figsize=(8, 5))
-    bars = ax.bar(by_cat.index, share.values, color="steelblue")
+    bars = ax.bar(by_cat.index, share.values, color=colors)
     ax.bar_label(bars, labels=[f"{v:.1f}%" for v in share.values], padding=3)
     ax.set_ylabel("Доля в общей выручке, %")
     ax.set_title("Выручка по категориям")
@@ -30,10 +41,11 @@ def build_category_bar(df):
 
     return fig
 
-DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
-
-
 def build_weekday_plot(df):
+    """
+    Построение графика заказов по дням недели
+    
+    """
     dates = df["order_date"]
 
     # одна строка на заказ, чтобы не считать позиции внутри заказа несколько раз
@@ -46,7 +58,7 @@ def build_weekday_plot(df):
     )
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    bars = ax.bar(DAYS, counts.values, color="steelblue")
+    bars = ax.bar(config.DAYS, counts.values, color="steelblue")
     ax.bar_label(bars, padding=3)
     ax.set_ylabel("Количество заказов")
     ax.set_title("Заказы по дням недели")
